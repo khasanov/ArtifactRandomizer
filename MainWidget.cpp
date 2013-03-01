@@ -1,77 +1,63 @@
 #include "MainWidget.h"
 
 #include <QPushButton>
-#include <QGraphicsScene>
-#include <QMouseEvent>
-
 #include <QSpinBox>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QScrollArea>
-#include <QTextBrowser>
 #include <QAction>
 #include <QMenu>
 #include <QMenuBar>
 #include <QStatusBar>
 #include <QLocale>
+#include <QTableWidget>
+#include <QApplication>
+#include <QClipboard>
+#include <QMimeData>
 
 #include "AboutDialog.h"
-
-ArtifactItem::ArtifactItem(qreal x, qreal y)
-{
-    m_x = x;
-    m_y = y;
-}
-
-QRectF ArtifactItem::boundingRect() const
-{
-    return QRectF(m_x, m_y, 1, 1);
-}
-
-View::View(MainWidget *p, QWidget *parent)
-    : QGraphicsView(parent), m_parent(p)
-{
-    scene = new QGraphicsScene;
-    scene->setItemIndexMethod(QGraphicsScene::NoIndex);
-    scene->setSceneRect(0, 0, 500, 500);
-
-    setCacheMode(QGraphicsView::CacheBackground);
-    setRenderHint(QPainter::Antialiasing);
-    setScene(scene);
-
-    drawGrid();
-}
-
-void View::drawGrid()
-{
-    QPen blackPen;
-    blackPen.setColor(Qt::black);
-    QPen grayPen;
-    grayPen.setColor(Qt::gray);
-
-    for (int i = 0; i < 600; ++i)
-    {
-        QLineF line;
-        line.setLine(i * 10, 0, i * 10, 500);
-        scene->addLine(line, grayPen);
-        line.setLine(0, i *10, 500, i* 10);
-        scene->addLine(line, grayPen);
-    }
-    for (int i = 0; i < 6; ++i)
-    {
-        QLineF line;
-        line.setLine(i * 100, 0, i * 100, 500);
-        scene->addLine(line, blackPen);
-        line.setLine(0, i * 100, 500, i * 100);
-        scene->addLine(line, blackPen);
-    }
-}
+#include "View.h"
 
 MainWidget::MainWidget(QWidget *parent)
     : QMainWindow(parent)
 {
-    /* GUI */
+    createActions();
+    createGui();
+    createConnections();
+}
+
+MainWidget::~MainWidget()
+{
+}
+
+void MainWidget::createActions()
+{
+    exitAct = new QAction(tr("Выйти"), this);
+    exitAct->setShortcut(QKeySequence(tr("CTRL+Q")));
+
+    clearAct = new QAction(tr("Очистить"), this);
+    clearAct->setShortcut(QKeySequence(tr("CTRL+Z")));
+
+    aboutAct = new QAction(tr("О программе"), this);
+    aboutAct->setShortcut(QKeySequence(tr("F1")));
+
+    selectAllAct = new QAction(tr("Выделить все"), this);
+    selectAllAct->setShortcut(QKeySequence(tr("CTRL+A")));
+
+    selectXColumnAct = new QAction(tr("Выделить колонку X"), this);
+    selectXColumnAct->setShortcut(QKeySequence(tr("CTRL+X")));
+
+    selectYColumnAct = new QAction(tr("Выделить колонку Y"), this);
+    selectYColumnAct->setShortcut(QKeySequence(tr("CTRL+Y")));
+
+    copySelectedAct = new QAction(tr("Копировать выделенное"), this);
+    copySelectedAct->setShortcut(QKeySequence(tr("CTRL+C")));
+}
+
+void MainWidget::createGui()
+{
+    //
     xSpinBox = new QSpinBox;
     xSpinBox->setMinimumWidth(100);
     xSpinBox->setMaximum(MAX_X);
@@ -91,20 +77,25 @@ MainWidget::MainWidget(QWidget *parent)
     topLayout->addStretch();
     topLayout->addWidget(clearButton);
 
-
-    QScrollArea *scrollArea = new QScrollArea;
-    textEdit = new QTextEdit;
-
-    QHBoxLayout *middleLayout = new QHBoxLayout;
-    middleLayout->addWidget(scrollArea);
-    middleLayout->addWidget(textEdit);
-
+    //
+    tableWidget = new QTableWidget;
+    tableWidget->setGridStyle(Qt::NoPen);
+    tableWidget->setColumnCount(2);
+    QStringList headers;
+    headers << tr("X") << tr("Y");
+    tableWidget->setHorizontalHeaderLabels(headers);
+    tableWidget->setContextMenuPolicy(Qt::CustomContextMenu);
 
     view = new View(this);
+    QScrollArea *scrollArea = new QScrollArea;
     scrollArea->setWidget(view);
     scrollArea->setAlignment(Qt::AlignCenter);
 
+    QHBoxLayout *middleLayout = new QHBoxLayout;
+    middleLayout->addWidget(scrollArea);
+    middleLayout->addWidget(tableWidget);
 
+    //
     QVBoxLayout *mainLayout = new QVBoxLayout;
     mainLayout->addLayout(topLayout);
     mainLayout->addLayout(middleLayout);
@@ -117,38 +108,47 @@ MainWidget::MainWidget(QWidget *parent)
 
     statusBar()->showMessage(tr(" "));
 
-
-
-    QAction *exitAct = new QAction(tr("Выйти"), this);
-    exitAct->setShortcut(QKeySequence(tr("CTRL+Q")));
-
-    QAction *clearAct = new QAction(tr("Очистить"), this);
-    clearAct->setShortcut(QKeySequence(tr("CTRL+C")));
-
-    QAction *aboutAct = new QAction(tr("О программе"), this);
-
+    // Menus
     QMenu *fileMenu = menuBar()->addMenu(tr("Файл"));
     fileMenu->addAction(clearAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
 
+    QMenu *editMenu = menuBar()->addMenu(tr("Правка"));
+    editMenu->addAction(selectXColumnAct);
+    editMenu->addAction(selectYColumnAct);
+    editMenu->addAction(selectAllAct);
+    editMenu->addSeparator();
+    editMenu->addAction(copySelectedAct);
+
     QMenu *helpMenu = menuBar()->addMenu(tr("Справка"));
     helpMenu->addAction(aboutAct);
+}
 
+void MainWidget::createConnections()
+{
     connect(exitAct, SIGNAL(triggered()), this, SLOT(close()));
     connect(clearAct, SIGNAL(triggered()), this, SLOT(clearPoint()));
     connect(clearButton, SIGNAL(clicked()), this, SLOT(clearPoint()));
     connect(aboutAct, SIGNAL(triggered()), this, SLOT(showAbout()));
 
-}
+    connect(selectXColumnAct, SIGNAL(triggered()), this, SLOT(selectXColumn()));
+    connect(selectYColumnAct, SIGNAL(triggered()), this, SLOT(selectYColumn()));
+    connect(selectAllAct, SIGNAL(triggered()), this, SLOT(selectAll()));
 
-MainWidget::~MainWidget()
-{
+    connect(copySelectedAct, SIGNAL(triggered()), this, SLOT(copySelected()));
+
+    connect(tableWidget, SIGNAL(customContextMenuRequested(const QPoint &)),
+            this, SLOT(showContextMenu(const QPoint &)));
 }
 
 void MainWidget::clearPoint()
 {
-    textEdit->clear();
+    for (int i = tableWidget->rowCount() - 1; i >= 0; --i)
+    {
+        tableWidget->removeRow(i);
+    }
+
     view->clearArtifactList();
     statusBar()->clearMessage();
 }
@@ -159,55 +159,75 @@ void MainWidget::showAbout()
     dlg.exec();
 }
 
-void View::drawBackground(QPainter *painter, const QRectF &rect)
+void MainWidget::selectXColumn()
 {
-    painter->fillRect(rect.intersect(sceneRect()), QBrush(Qt::lightGray));
-    painter->setBrush(Qt::NoBrush);
-    painter->drawRect(sceneRect());
+    tableWidget->selectColumn(0);
 }
 
-void View::mousePressEvent(QMouseEvent *event)
+void MainWidget::selectYColumn()
 {
-    QPointF areaMouseClickCoord;
-    areaMouseClickCoord = event->pos();
-    int x = areaMouseClickCoord.x();
-    int y = areaMouseClickCoord.y();
-
-    qreal real_x = x / 100.0;
-    qreal real_y = (500 - y) / 100.0;
-
-    m_parent->showPointData(real_x, real_y);
-
-    ArtifactItem *artifact = new ArtifactItem(x, y);
-
-    artifactList.append(artifact);
-    scene->addItem(artifact);
-    scene->update();
-
-    m_parent->statusBar()->showMessage(tr("Всего находок: %1 шт.").arg(artifactList.count()));
+    tableWidget->selectColumn(1);
 }
 
-void MainWidget::showPointData(qreal x, qreal y)
+void MainWidget::selectAll()
 {
-    QString data;
+    tableWidget->selectAll();
+}
+
+void MainWidget::copySelected()
+{
+    QModelIndex index;
+    QByteArray str;
+
+    const QItemSelection selection = tableWidget->selectionModel()->selection();
+    int minrow = selection.at(0).top();
+    int mincolumn = selection.at(0).left();
+    int maxrow = selection.at(0).bottom();
+    int maxcolumn = selection.at(0).right();
+
+    for (int i = minrow; i <= maxrow; ++i)
+    {
+        if (i > minrow)
+            str += "\n";
+            for (int j = mincolumn; j <= maxcolumn; ++j)
+            {
+                if (j > mincolumn)
+                    str += "\t";
+                    index = tableWidget->model()->index(i, j, QModelIndex());
+                    QString t = tableWidget->model()->data(index).toString();
+                    str += t;
+            }
+    }
+
+    QMimeData * mimeData = new QMimeData();
+    mimeData->setData("text/plain", str);
+    QApplication::clipboard()->setMimeData(mimeData);
+}
+
+void MainWidget::showArtifactPosition(qreal x, qreal y)
+{
     QLocale rus(QLocale::Russian);
 
-    data.append(rus.toString((xSpinBox->value() + x), char('f'), 2));
-    data.append("\t");
-    data.append(rus.toString((ySpinBox->value() + y), char('f'), 2));
-    textEdit->append(data);
+    int row = tableWidget->rowCount();
+    QTableWidgetItem *xItem = new QTableWidgetItem(rus.toString((xSpinBox->value() + x), char('f'), 2));
+    QTableWidgetItem *yItem = new QTableWidgetItem(rus.toString((ySpinBox->value() + y), char('f'), 2));
+    xItem->setFlags(xItem->flags() ^ Qt::ItemIsEditable);
+    yItem->setFlags(yItem->flags() ^ Qt::ItemIsEditable);
+    tableWidget->insertRow(row);
+    tableWidget->setItem(row, 0, xItem);
+    tableWidget->setItem(row, 1, yItem);
 }
 
-void ArtifactItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+void MainWidget::showContextMenu(const QPoint &pos)
 {
-    painter->drawRect(m_x, m_y, 1, 1);
-}
+    QPoint globalPos = tableWidget->mapToGlobal(pos);
+    QMenu menu;
 
-void View::clearArtifactList()
-{
-    for (int i = 0; i < artifactList.count(); ++i)
-    {
-        scene->removeItem(artifactList.at(i));
-    }
-    artifactList.clear();
+    menu.addAction(selectXColumnAct);
+    menu.addAction(selectYColumnAct);
+    menu.addAction(selectAllAct);
+    menu.addSeparator();
+    menu.addAction(copySelectedAct);
+
+    menu.exec(globalPos);
 }
