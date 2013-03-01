@@ -7,8 +7,10 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     MainWidget.cpp \
-    AboutDialog.cpp
+    AboutDialog.cpp \
+    View.cpp
 
 HEADERS  += \
     MainWidget.h \
-    AboutDialog.h
+    AboutDialog.h \
+    View.h
