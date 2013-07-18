@@ -4,11 +4,10 @@
 #include "View.h"
 #include "MainWidget.h"
 
-ArtifactItem::ArtifactItem(qreal x, qreal y)
-{
-    m_x = x;
-    m_y = y;
-}
+ArtifactItem::ArtifactItem(qreal x, qreal y) :
+    m_x(x),
+    m_y(y)
+{}
 
 QRectF ArtifactItem::boundingRect() const
 {
@@ -41,16 +40,14 @@ void View::drawGrid()
     QPen grayPen;
     grayPen.setColor(Qt::gray);
 
-    for (int i = 0; i < 600; ++i)
-    {
+    for (int i = 0; i < 600; ++i) {
         QLineF line;
         line.setLine(i * 10, 0, i * 10, 500);
         scene->addLine(line, grayPen);
         line.setLine(0, i *10, 500, i* 10);
         scene->addLine(line, grayPen);
     }
-    for (int i = 0; i < 6; ++i)
-    {
+    for (int i = 0; i < 6; ++i) {
         QLineF line;
         line.setLine(i * 100, 0, i * 100, 500);
         scene->addLine(line, blackPen);
@@ -89,8 +86,7 @@ void View::mousePressEvent(QMouseEvent *event)
 
 void View::clearArtifactList()
 {
-    for (int i = 0; i < artifactList.count(); ++i)
-    {
+    for (int i = 0; i < artifactList.count(); ++i) {
         scene->removeItem(artifactList.at(i));
     }
     artifactList.clear();

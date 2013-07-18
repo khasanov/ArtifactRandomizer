@@ -28,8 +28,7 @@ MainWidget::MainWidget(QWidget *parent)
 }
 
 MainWidget::~MainWidget()
-{
-}
+{}
 
 void MainWidget::createActions()
 {
@@ -144,8 +143,7 @@ void MainWidget::createConnections()
 
 void MainWidget::clearPoint()
 {
-    for (int i = tableWidget->rowCount() - 1; i >= 0; --i)
-    {
+    for (int i = tableWidget->rowCount() - 1; i >= 0; --i) {
         tableWidget->removeRow(i);
     }
 
@@ -180,23 +178,23 @@ void MainWidget::copySelected()
     QByteArray str;
 
     const QItemSelection selection = tableWidget->selectionModel()->selection();
+    if (selection.isEmpty()) return;
+
     int minrow = selection.at(0).top();
     int mincolumn = selection.at(0).left();
     int maxrow = selection.at(0).bottom();
     int maxcolumn = selection.at(0).right();
 
-    for (int i = minrow; i <= maxrow; ++i)
-    {
+    for (int i = minrow; i <= maxrow; ++i) {
         if (i > minrow)
             str += "\n";
-            for (int j = mincolumn; j <= maxcolumn; ++j)
-            {
-                if (j > mincolumn)
-                    str += "\t";
-                    index = tableWidget->model()->index(i, j, QModelIndex());
-                    QString t = tableWidget->model()->data(index).toString();
-                    str += t;
-            }
+        for (int j = mincolumn; j <= maxcolumn; ++j) {
+            if (j > mincolumn)
+                str += "\t";
+            index = tableWidget->model()->index(i, j, QModelIndex());
+            QString t = tableWidget->model()->data(index).toString();
+            str += t;
+        }
     }
 
     QMimeData * mimeData = new QMimeData();
