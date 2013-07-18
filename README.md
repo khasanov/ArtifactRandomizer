@@ -1,4 +1,4 @@
-ArtifactRandomizer
+ArtifactsOnThePlan
 ==================
 
 A simple program that allows you to extract the coordinates of the
@@ -37,8 +37,8 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-Планиграф
-=========
+Находки на плане
+================
 
 Простая программа, которая позволяет получить координаты находок из
 археологического плана.
